@@ -1,0 +1,73 @@
+:source-highlighter: prettify
+:toc: left
+:toc-title: Sumário
+
+= Atividades Processamento Digital de Imagens
+:author: Ítalo Hugo Costa Bezerra 
+:email: italocosta16@gmail.com
+
+Departamento de Engenharia de Computação e Automação.
+
+== 1ª Unidade
+
+=== Exercício 1 - regions.cpp
+
+[sidebar]
+****
+[source,c++]
+----
+#include <iostream>
+#include <stdlib.h>
+#include <cv.h>
+#include <highgui.h>
+
+using namespace cv;
+using namespace std;
+
+struct ponto{
+  int x, y;
+};
+
+int main(int argc, char** argv){
+  Mat image;
+
+  ponto p1, p2;
+
+  if(argv[1] == NULL || argv[2] == NULL || argv[3] == NULL || argv[4] == NULL){
+    cout << "\nPasse as coordenadas dos pontos p1 e p2. Ex.: 130 140 20 100\n";
+    exit(1);
+  }
+
+
+  p1.x = atoi(argv[1]);
+  p1.y = atoi(argv[2]);
+  p2.x = atoi(argv[3]);
+  p2.y = atoi(argv[4]);
+
+  image= imread("biel.png",CV_LOAD_IMAGE_GRAYSCALE);
+  if(!image.data)
+    cout << "nao abriu biel.png" << endl;
+
+  namedWindow("janela",WINDOW_AUTOSIZE);
+
+  for(int i=p1.x;i<p1.y;i++){
+    for(int j=p2.x;j<p2.y;j++){
+      image.at<uchar>(i,j)= 255 - image.at<uchar>(i,j);
+    }
+  }
+  
+  imshow("janela", image);  
+  waitKey();
+
+  return 0;
+}
+
+----
+****
+
+Os resultados são mostrados abaixo:
+
+image:biel.png[biel]
+
+
+=== Exercício 2 - trocaregioes.cpp
