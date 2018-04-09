@@ -440,6 +440,11 @@ body.book #toc,body.book #preamble,body.book h1.sect0,body.book .sect1>h2{page-b
 <ul class="sectlevel2">
 <li><a href="#_exercício_1_regions_cpp">Exercício 1 - regions.cpp</a></li>
 <li><a href="#_exercício_2_trocaregioes_cpp">Exercício 2 - trocaregioes.cpp</a></li>
+<li><a href="#_exercício_3_preenchendo_regiões">Exercício 3 - Preenchendo regiões</a></li>
+<li><a href="#_exercício_4_equalize_cpp">Exercício 4 - equalize.cpp</a></li>
+<li><a href="#_exercício_5_motiondetector_cpp">Exercício 5 - motiondetector.cpp</a></li>
+<li><a href="#_exercício_6_laplgauss_cpp">Exercício 6 - laplgauss.cpp</a></li>
+<li><a href="#_exercício_7_tiltshift_cpp">Exercício 7 - tiltshift.cpp</a></li>
 </ul>
 </li>
 </ul>
@@ -463,47 +468,382 @@ body.book #toc,body.book #preamble,body.book h1.sect0,body.book .sect1>h2{page-b
 <div class="listingblock">
 <div class="content">
 <pre class="prettyprint highlight"><code class="language-c++" data-lang="c++">#include &lt;iostream&gt;
-#include &lt;stdlib.h&gt;
+#include &lt;opencv2/opencv.hpp&gt;
+
+using namespace std;
+using namespace cv;
+
+int main(int, char**){
+  Mat image;
+  int x1, y1, x2, y2;
+
+
+  image= imread("biel.png",CV_LOAD_IMAGE_GRAYSCALE);
+  if(!image.data)
+    cout &lt;&lt; "Imagem não encontrada" &lt;&lt; endl;
+
+  namedWindow("Exercicio 1",WINDOW_AUTOSIZE);
+
+  cout &lt;&lt; "Ponto 1:\nValor de X: ";
+  cin &gt;&gt; x1;
+  cout &lt;&lt; "Valor de Y: ";
+  cin &gt;&gt; y1;
+  cout &lt;&lt; "Ponto 2:\nValor de X: ";
+  cin &gt;&gt; x2;
+  cout &lt;&lt; "Valor de Y: ";
+  cin &gt;&gt; y2;
+
+  //Negativação
+  for(int i=x1;i&lt;x2;i++){
+    for(int j=y1;j&lt;y2;j++){
+      image.at&lt;uchar&gt;(i,j)=255-image.at&lt;uchar&gt;(i,j);
+    }
+  }
+
+  imshow("Exercicio 1", image);
+  imwrite("negativo.png", image);
+  waitKey();
+  return 0;
+}</code></pre>
+</div>
+</div>
+</div>
+</div>
+<div class="paragraph">
+<p>Os resultados são mostrados abaixo para os pontos (30,30) e (135,135):</p>
+</div>
+<div class="paragraph">
+<p><span class="image"><img src="negativo.png" alt="biel"></span></p>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_exercício_2_trocaregioes_cpp">Exercício 2 - trocaregioes.cpp</h3>
+<div class="sidebarblock">
+<div class="content">
+<div class="listingblock">
+<div class="content">
+<pre class="prettyprint highlight"><code class="language-c++" data-lang="c++">#include &lt;iostream&gt;
+#include &lt;opencv2/opencv.hpp&gt;
 #include &lt;cv.h&gt;
+#include &lt;stdlib.h&gt;
 #include &lt;highgui.h&gt;
+#include &lt;opencv2/imgproc/imgproc.hpp&gt;
+
 
 using namespace cv;
 using namespace std;
 
-struct ponto{
-  int x, y;
-};
+int main(int, char**){
+  Mat img, aux1, aux2, img2;
+
+  img= imread("biel.png",CV_LOAD_IMAGE_GRAYSCALE);
+  if(!img.data)
+    cout &lt;&lt; "Erro ao biel.png!" &lt;&lt; endl;
+
+  namedWindow("Resultado",WINDOW_AUTOSIZE);
+
+//Salvando quadrantes
+  Mat Q1(img, Rect(0,0,(img.size().width/2),(img.size().height/2)));
+  Mat Q2(img, Rect((img.size().height/2),0,(img.size().width/2),(img.size().height/2)));
+  Mat Q3(img, Rect(0,(img.size().height/2),(img.size().width/2),(img.size().height/2)));
+  Mat Q4(img, Rect((img.size().height/2),(img.size().height/2),(img.size().width/2),(img.size().height/2)));
+
+//Concatenando quadrantes
+  hconcat(Q4, Q3, aux1);
+  hconcat(Q2, Q1, aux2);
+  vconcat(aux1, aux2, img2);
+
+  imshow("Resultado", img2);
+  imwrite("result.png", img2);
+  waitKey();
+  return 0;
+}</code></pre>
+</div>
+</div>
+</div>
+</div>
+<div class="paragraph">
+<p>Os resultados são mostrados abaixo:</p>
+</div>
+<div class="paragraph">
+<p><span class="image"><img src="result.png" alt="biel"></span></p>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_exercício_3_preenchendo_regiões">Exercício 3 - Preenchendo regiões</h3>
+<div class="sidebarblock">
+<div class="content">
+<div class="listingblock">
+<div class="content">
+<pre class="prettyprint highlight"><code class="language-c++" data-lang="c++">#include &lt;iostream&gt;
+#include &lt;opencv2/opencv.hpp&gt;
+
+using namespace cv;
+using namespace std;
 
 int main(int argc, char** argv){
   Mat image;
+  int width, height;
 
-  ponto p1, p2;
+  CvPoint p;
+  image = imread(argv[1],CV_LOAD_IMAGE_GRAYSCALE);
 
-  if(argv[1] == NULL || argv[2] == NULL || argv[3] == NULL || argv[4] == NULL){
-    cout &lt;&lt; "\nPasse as coordenadas dos pontos p1 e p2. Ex.: 130 140 20 100\n";
-    exit(1);
+  if(!image.data){
+    std::cout &lt;&lt; "Erro ao abrir imagem!\n";
+    return(-1);
   }
+  width=image.size().width;
+  height=image.size().height;
 
+  p.x=0;
+  p.y=0;
 
-  p1.x = atoi(argv[1]);
-  p1.y = atoi(argv[2]);
-  p2.x = atoi(argv[3]);
-  p2.y = atoi(argv[4]);
-
-  image= imread("biel.png",CV_LOAD_IMAGE_GRAYSCALE);
-  if(!image.data)
-    cout &lt;&lt; "nao abriu biel.png" &lt;&lt; endl;
-
-  namedWindow("janela",WINDOW_AUTOSIZE);
-
-  for(int i=p1.x;i&lt;p1.y;i++){
-    for(int j=p2.x;j&lt;p2.y;j++){
-      image.at&lt;uchar&gt;(i,j)= 255 - image.at&lt;uchar&gt;(i,j);
+//Resolvendo o problema das bordas
+  for(int i=0; i&lt;height; i++){
+    if(image.at&lt;uchar&gt;(0,i) == 255){
+	p.x=0;
+	p.y=i;
+	floodFill(image,p,0);
+    }
+  }
+  for(int i=0; i&lt;height; i++){
+    if(image.at&lt;uchar&gt;(i,width-1) == 255){
+	p.x=width-1;
+	p.y=i;
+	floodFill(image,p,0);
+    }
+  }
+  for(int j=0; j&lt;width; j++){
+    if(image.at&lt;uchar&gt;(0,j) == 255){
+	p.x=j;
+	p.y=0;
+	floodFill(image,p,0);
+    }
+  }
+  for(int j=0; j&lt;width; j++){
+    if(image.at&lt;uchar&gt;(height-1,j) == 255){
+	p.x=j;
+	p.y=height-1;
+	floodFill(image,p,0);
     }
   }
 
-  imshow("janela", image);
+//mudando cor do background
+  p.x=0;
+  p.y=0;
+  floodFill(image,p,155);
+
+//Contando as bolhas
+  int numb = 0;
+  int numf = 0;
+  for(int i=0; i&lt;height; i++){
+    for(int j=0; j&lt;width; j++){
+      //Achou uma bolha
+      if(image.at&lt;uchar&gt;(i,j) == 255){
+        numb++;
+        p.x=j;
+        p.y=i;
+        floodFill(image,p,40);
+      }
+      //pinta o burado da bolha
+      if(image.at&lt;uchar&gt;(i,j) == 0){
+        p.x=j;
+        p.y=i-1;
+        floodFill(image,p,200);
+        p.x=j;
+        p.y=i;
+        floodFill(image,p,200);
+      }
+    }
+  }
+  //Contando as bolhas com buraco e pintando elas na cor normal
+  for(int i=0; i&lt;height; i++){
+    for(int j=0; j&lt;width; j++){
+      if(image.at&lt;uchar&gt;(i,j) == 200){
+        numf++;
+        p.x=j;
+        p.y=i;
+        floodFill(image,p,40);
+      }
+    }
+  }
+
+  cout &lt;&lt; numb &lt;&lt; " bolhas foram encontradas." &lt;&lt; endl;
+  cout &lt;&lt; numf &lt;&lt; " bolhas com furos foram encontradas." &lt;&lt; endl;
+
+  imshow("Resultado", image);
+  imwrite("resultado.png", image);
   waitKey();
+  return 0;
+}</code></pre>
+</div>
+</div>
+</div>
+</div>
+<div class="paragraph">
+<p>Figura base:</p>
+</div>
+<div class="paragraph">
+<p><span class="image"><img src="bolhas.png" alt="bolhas"></span></p>
+</div>
+<div class="paragraph">
+<p>Os resultados são mostrados abaixo:</p>
+</div>
+<div class="paragraph">
+<p><span class="image"><img src="resultado.png" alt="resultado"></span></p>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_exercício_4_equalize_cpp">Exercício 4 - equalize.cpp</h3>
+<div class="sidebarblock">
+<div class="content">
+<div class="listingblock">
+<div class="content">
+<pre class="prettyprint highlight"><code class="language-c++" data-lang="c++">#include &lt;iostream&gt;
+#include &lt;opencv2/opencv.hpp&gt;
+
+using namespace cv;
+using namespace std;
+
+int main(int argc, char** argv){
+  Mat image, cinza, saida, histG, histE;
+  VideoCapture cap;
+  int nbins = 64;
+  float range[] = {0, 256};
+  const float *histrange = { range };
+  bool uniform = true;
+  bool acummulate = false;
+
+  int histw = nbins, histh = nbins/2;
+  Mat histGimg(histh, histw, CV_BGR2GRAY, Scalar(0));
+  Mat histEimg(histh, histw, CV_BGR2GRAY, Scalar(0));
+
+  cap.open(0);
+
+  if(!cap.isOpened()){
+    cout &lt;&lt; "Erro ao abrir camera.";
+    return -1;
+  }
+
+  while(1){
+    //captura a imagem
+    cap &gt;&gt; image;
+    //transforma para escala de cinza
+    cvtColor( image, cinza, CV_BGR2GRAY );
+    //equaliza o histograma
+    equalizeHist( cinza, saida );
+
+    calcHist(&amp;cinza, 1, 0, Mat(), histG, 1, &amp;nbins, &amp;histrange, uniform, acummulate);
+
+    calcHist(&amp;saida, 1, 0, Mat(), histE, 1, &amp;nbins, &amp;histrange, uniform, acummulate);
+
+    normalize(histG, histG, 0, histGimg.rows, NORM_MINMAX, -1, Mat());
+    normalize(histE, histE, 0, histEimg.rows, NORM_MINMAX, -1, Mat());
+
+    histGimg.setTo(Scalar(0));
+    histEimg.setTo(Scalar(0));
+
+    for(int i=0; i&lt;nbins; i++){
+      line(histGimg,
+           Point(i, histh),
+           Point(i, histh-cvRound(histG.at&lt;float&gt;(i))),
+           Scalar(255), 1, 8, 0);
+      line(histEimg,
+           Point(i, histh),
+           Point(i, histh-cvRound(histE.at&lt;float&gt;(i))),
+           Scalar(255), 1, 8, 0);
+    }
+
+    histGimg.copyTo(cinza(Rect(0, 0,nbins, histh)));
+    histEimg.copyTo(saida(Rect(0, 0,nbins, histh)));
+
+    imshow("saida", saida);
+    imshow("cinza", cinza);
+
+  }
+
+  return 0;
+}</code></pre>
+</div>
+</div>
+</div>
+</div>
+<div class="paragraph">
+<p>Figura base:</p>
+</div>
+<div class="paragraph">
+<p><span class="image"><img src="cinza.png" alt="cinza"></span></p>
+</div>
+<div class="paragraph">
+<p>Os resultados são mostrados abaixo:</p>
+</div>
+<div class="paragraph">
+<p><span class="image"><img src="resultado1.png" alt="resultado1"></span></p>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_exercício_5_motiondetector_cpp">Exercício 5 - motiondetector.cpp</h3>
+<div class="sidebarblock">
+<div class="content">
+<div class="listingblock">
+<div class="content">
+<pre class="prettyprint highlight"><code class="language-c++" data-lang="c++">#include &lt;iostream&gt;
+#include &lt;opencv2/opencv.hpp&gt;
+
+using namespace cv;
+using namespace std;
+
+int main(int argc, char** argv){
+  Mat image1,  hist1, hist2;
+  VideoCapture cap;
+  double comp;
+  double limiar = 0.99;
+  int nbins = 64;
+  float range[] = {0, 256};
+  const float *histrange = { range };
+  bool uniform = true;
+  bool acummulate = false;
+
+  vector&lt;Mat&gt; vet;
+
+  cap.open(0);
+
+  if(!cap.isOpened()){
+    cout &lt;&lt; "Não foi possvel abrir a camera";
+    return -1;
+  }
+
+  //captura a primeira imagem
+  cap &gt;&gt; image1;
+
+  split( image1, vet );
+
+  calcHist(&amp;vet[1], 1, 0, Mat(), hist2, 1, &amp;nbins, &amp;histrange, uniform, acummulate);
+
+  while(1){
+    //Captura uma nova imagem
+    cap &gt;&gt; image1;
+    //converte para cinza
+    //separa as cores RGB
+    split( image1, vet );
+
+    //Calcula o histograma de G
+    calcHist(&amp;vet[1], 1, 0, Mat(), hist1, 1, &amp;nbins, &amp;histrange, uniform, acummulate);
+
+    //Compara o histograma novo com o antigo
+    comp = compareHist(hist1, hist2, CV_COMP_CORREL);
+
+    //processo de alarme
+    if (comp &lt; limiar) {
+    putText(image1, "Movimento detectado!", Point(10, 40), FONT_HERSHEY_TRIPLEX, 1.0, CV_RGB(255,0,0), 2.0);
+    }
+    imshow("image1", image1);
+
+    //Guarda o histograma novo na variável do antigo
+    calcHist(&amp;vet[1], 1, 0, Mat(), hist2, 1, &amp;nbins, &amp;histrange, uniform, acummulate);
+
+    if(waitKey(30) &gt;= 0) break;
+  }
 
   return 0;
 }</code></pre>
@@ -515,19 +855,264 @@ int main(int argc, char** argv){
 <p>Os resultados são mostrados abaixo:</p>
 </div>
 <div class="paragraph">
-<p><span class="image"><img src="biel.png" alt="biel"></span></p>
+<p><span class="image"><img src="resultado2.png" alt="resultado2"></span></p>
 </div>
 </div>
 <div class="sect2">
-<h3 id="_exercício_2_trocaregioes_cpp">Exercício 2 - trocaregioes.cpp</h3>
+<h3 id="_exercício_6_laplgauss_cpp">Exercício 6 - laplgauss.cpp</h3>
+<div class="sidebarblock">
+<div class="content">
+<div class="listingblock">
+<div class="content">
+<pre class="prettyprint highlight"><code class="language-c++" data-lang="c++">#include &lt;iostream&gt;
+#include &lt;opencv2/opencv.hpp&gt;
 
+using namespace cv;
+using namespace std;
+
+int main(int argvc, char** argv){
+  VideoCapture video;
+  float gauss[] = {1,2,1,
+		   2,4,2,
+		   1,2,1};
+  float laplacian[]={0 ,-1,0,
+		     -1,4 ,-1,
+		     0 ,-1,0};
+
+  Mat cap, frame, frame32f, frameF1, frameF2;
+  Mat mask(3,3,CV_32F);
+  Mat result;
+  char key;
+
+  video.open(0);
+  if(!video.isOpened())
+    return -1;
+
+  namedWindow("filtroespacial",1);
+
+  for(;;){
+    video &gt;&gt; cap;
+    cvtColor(cap, frame, CV_BGR2GRAY);
+    flip(frame, frame, 1);
+    imshow("original", frame);
+    frame.convertTo(frame32f, CV_32F);
+
+    //aplicando a mascara de gauss
+    mask = Mat(3, 3, CV_32F, gauss);
+
+    filter2D(frame32f, frameF1, frame32f.depth(), mask, Point(1,1), 0);
+
+    //aplicando a mascara laplaciana
+    mask = Mat(3, 3, CV_32F, laplacian);
+
+    filter2D(frameF1, frameF2, frame32f.depth(), mask, Point(1,1), 0);
+
+    frameF2.convertTo(result, CV_8U);
+
+    imshow("filtroespacial", result);
+
+    }
+  }
+  return 0;
+}</code></pre>
+</div>
+</div>
+</div>
+</div>
+<div class="paragraph">
+<p>Figura base:</p>
+</div>
+<div class="paragraph">
+<p><span class="image"><img src="espacial1.png" alt="espacial1"></span></p>
+</div>
+<div class="paragraph">
+<p>Os resultados são mostrados abaixo:</p>
+</div>
+<div class="paragraph">
+<p><span class="image"><img src="espacial2.png" alt="espacial2"></span></p>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_exercício_7_tiltshift_cpp">Exercício 7 - tiltshift.cpp</h3>
+<div class="sidebarblock">
+<div class="content">
+<div class="listingblock">
+<div class="content">
+<pre class="prettyprint highlight"><code class="language-c++" data-lang="c++">#include &lt;iostream&gt;
+#include &lt;opencv2/opencv.hpp&gt;
+#include &lt;cmath&gt;
+
+using namespace cv;
+using namespace std;
+
+double ARC;
+double FD;
+double PVC;
+double alpha;
+
+int sldrARC;
+int sldrARCmax;
+int sldrFD;
+int sldrFDmax;
+int sldrPVC;
+int sldrPVCmax;
+
+Mat img, borrada, tilt;
+
+char TrackbarName[50];
+
+//Função para borrar a ibagen
+void borrar(){
+  //Criação da mascara de borramento
+  float gauss[] = {1,2,1,
+		   2,4,2,
+		   1,2,1};
+  Mat mask(3,3,CV_32F);
+  mask = Mat(3, 3, CV_32F, gauss);
+  scaleAdd(mask, 1/16.0, Mat::zeros(3,3,CV_32F), mask);
+
+  img.convertTo(borrada, CV_32F);
+
+  filter2D(borrada, borrada, borrada.depth(), mask, Point(1,1), 0);
+  filter2D(borrada, borrada, borrada.depth(), mask, Point(1,1), 0);
+  filter2D(borrada, borrada, borrada.depth(), mask, Point(1,1), 0);
+  filter2D(borrada, borrada, borrada.depth(), mask, Point(1,1), 0);
+  filter2D(borrada, borrada, borrada.depth(), mask, Point(1,1), 0);
+  filter2D(borrada, borrada, borrada.depth(), mask, Point(1,1), 0);
+  filter2D(borrada, borrada, borrada.depth(), mask, Point(1,1), 0);
+
+  borrada.convertTo(borrada, CV_8U);
+}
+
+void saida()
+{
+  double x_;
+
+  for(int i = 0; i &lt; img.rows; i++){
+    //valor de X deslocado
+    x_ = i - (PVC + ARC/2.0);
+    //calculo do alpha
+    alpha = 0.5 * (tanh((x_ + ARC/2)/FD) - tanh((x_ - ARC/2)/FD));
+    for(int j = 0; j &lt; img.cols; j++){
+      //combinação das ibagens para imagem de saida
+      tilt.at&lt;Vec3b&gt;(i, j) = alpha * img.at&lt;Vec3b&gt;(i, j) + (1-alpha)*borrada.at&lt;Vec3b&gt;(i, j);
+    }
+  }
+}
+
+//aumentar saturação da imagem
+void aumentarSat(){
+  Mat imghsv, hsv[3];
+  cvtColor(tilt, imghsv, COLOR_BGR2HSV);
+  split(imghsv, hsv);
+  hsv[1] = hsv[1] * 1.8;
+  merge(hsv, 3, imghsv);
+  cvtColor(imghsv, tilt, COLOR_HSV2BGR);
+}
+
+//Alterar o slider da Posição Vertical do Centro
+void alterarSldrPVC(int, void*){
+  PVC = sldrPVC;
+  saida();
+  aumentarSat();
+  imshow("Tiltshift", tilt);
+}
+
+//Alterar slider da Altura da Região central
+void alterarSldrARC(int, void*){
+  ARC = sldrARC;
+  saida();
+  aumentarSat();
+  imshow("Tiltshift", tilt);
+}
+
+//Slider para alterar a Força de Decaimento
+void alterarSldrFD(int, void*){
+  FD = sldrFD;
+  //Para evitar divião por 0 forçamos o minimo igual a 1
+  if(FD == 0){
+    FD = 1;
+  }
+  saida();
+  aumentarSat();
+  imshow("Tiltshift", tilt);
+}
+
+
+int main(int argc, char* argv[]){
+
+//Leitura da imagem
+  img = imread(argv[1], CV_LOAD_IMAGE_COLOR);
+
+  if (!img.data){
+    cout &lt;&lt; "Imagem não foi aberta" &lt;&lt; endl;
+    return -2;
+  }
+
+  tilt = img.clone();
+
+  //criação da janela e redimensionamento dela
+  namedWindow("Tiltshift", WINDOW_NORMAL);
+  resizeWindow("Tiltshift", 600,600);
+
+  //Criar imagem borrada
+  borrar();
+
+  //inicializar os valores dos sliders
+  sldrARC = 1;
+  sldrFD = 1;
+  sldrPVC = 1;
+
+  //Definir o maximo de cada slider
+  sldrARCmax = tilt.rows;
+  sldrPVCmax = tilt.rows;
+  sldrFDmax = 100;
+
+  //Criação dos sliders
+  createTrackbar("Altura", "Tiltshift", &amp;sldrARC, sldrARCmax, alterarSldrARC);
+  alterarSldrARC(sldrARC, 0);
+
+  createTrackbar("Decaimento", "Tiltshift", &amp;sldrFD, sldrFDmax, alterarSldrFD );
+  alterarSldrFD(sldrFD, 0);
+
+  createTrackbar( "Centro", "Tiltshift", &amp;sldrPVC, sldrPVCmax, alterarSldrPVC );
+  alterarSldrPVC(sldrPVC, 0);
+
+  //esperar a tecla esc para finalizar o programa
+  while(1){
+    if(waitKey(30) &gt;= 0){
+      break;
+    }
+  }
+
+  //Imprimir imagem final
+  imwrite("tiltshift.png", tilt);
+
+  return 0;
+}</code></pre>
+</div>
+</div>
+</div>
+</div>
+<div class="paragraph">
+<p>Figura base:</p>
+</div>
+<div class="paragraph">
+<p><span class="image"><img src="city.jpg" alt="city"></span></p>
+</div>
+<div class="paragraph">
+<p>Os resultados são mostrados abaixo:</p>
+</div>
+<div class="paragraph">
+<p><span class="image"><img src="tiltshift.png" alt="tiltshift"></span></p>
+</div>
 </div>
 </div>
 </div>
 </div>
 <div id="footer">
 <div id="footer-text">
-Last updated 2018-04-08 21:06:44 -03
+Last updated 2018-04-08 21:50:18 -03
 </div>
 </div>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prettify/r298/prettify.min.css">

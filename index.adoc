@@ -16,58 +16,115 @@ Departamento de Engenharia de Computação e Automação.
 ****
 [source,c++]
 ----
-#include <iostream>
-#include <stdlib.h>
-#include <cv.h>
-#include <highgui.h>
+include::regions.cpp[]
+----
+****
 
-using namespace cv;
-using namespace std;
+Os resultados são mostrados abaixo para os pontos (30,30) e (135,135):
 
-struct ponto{
-  int x, y;
-};
-
-int main(int argc, char** argv){
-  Mat image;
-
-  ponto p1, p2;
-
-  if(argv[1] == NULL || argv[2] == NULL || argv[3] == NULL || argv[4] == NULL){
-    cout << "\nPasse as coordenadas dos pontos p1 e p2. Ex.: 130 140 20 100\n";
-    exit(1);
-  }
+image:negativo.png[biel]
 
 
-  p1.x = atoi(argv[1]);
-  p1.y = atoi(argv[2]);
-  p2.x = atoi(argv[3]);
-  p2.y = atoi(argv[4]);
+=== Exercício 2 - trocaregioes.cpp
 
-  image= imread("biel.png",CV_LOAD_IMAGE_GRAYSCALE);
-  if(!image.data)
-    cout << "nao abriu biel.png" << endl;
-
-  namedWindow("janela",WINDOW_AUTOSIZE);
-
-  for(int i=p1.x;i<p1.y;i++){
-    for(int j=p2.x;j<p2.y;j++){
-      image.at<uchar>(i,j)= 255 - image.at<uchar>(i,j);
-    }
-  }
-  
-  imshow("janela", image);  
-  waitKey();
-
-  return 0;
-}
-
+[sidebar]
+****
+[source,c++]
+----
+include::trocaregioes.cpp[]
 ----
 ****
 
 Os resultados são mostrados abaixo:
 
-image:biel.png[biel]
+image:result.png[biel]
+
+=== Exercício 3 - Preenchendo regiões
+
+[sidebar]
+****
+[source,c++]
+----
+include::contagem.cpp[]
+----
+****
+
+Figura base:
+
+image:bolhas.png[]
+
+Os resultados são mostrados abaixo:
+
+image:resultado.png[]
+
+=== Exercício 4 - equalize.cpp
+
+[sidebar]
+****
+[source,c++]
+----
+include::equalize.cpp[]
+----
+****
+
+Figura base:
+
+image:cinza.png[]
+
+Os resultados são mostrados abaixo:
+
+image:resultado1.png[]
+
+=== Exercício 5 - motiondetector.cpp
+
+[sidebar]
+****
+[source,c++]
+----
+include::motiondetector.cpp[]
+----
+****
+
+Os resultados são mostrados abaixo:
+
+image:resultado2.png[]
+
+=== Exercício 6 - laplgauss.cpp
+
+[sidebar]
+****
+[source,c++]
+----
+include::laplgauss.cpp[]
+----
+****
+
+Figura base:
+
+image:espacial1.png[]
+
+Os resultados são mostrados abaixo:
+
+image:espacial2.png[]
+
+=== Exercício 7 - tiltshift.cpp
+
+[sidebar]
+****
+[source,c++]
+----
+include::tiltshift.cpp[]
+----
+****
+
+Figura base:
+
+image:city.jpg[]
+
+Os resultados são mostrados abaixo:
+
+image:tiltshift.png[]
 
 
-=== Exercício 2 - trocaregioes.cpp
+
+
