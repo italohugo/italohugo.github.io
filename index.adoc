@@ -125,6 +125,40 @@ Os resultados são mostrados abaixo:
 
 image:tiltshift.png[]
 
+== 2ª Unidade
 
+=== Exercício 1 - filtrohomo.cpp
 
+Implementação do filtro homomórfico para melhorar imagens com iluminação irregular. 
 
+[sidebar]
+****
+[source,c++]
+----
+include::homo.cpp[]
+----
+****
+
+Os resultados são mostrados abaixo:
+
+image:homo.png[]
+
+=== Exercício 2 - cannypoints.cpp
+
+Usar as bordas produzidas pelo algoritmo de Canny para melhorar a qualidade da imagem pontilhista gerada.
+
+[sidebar]
+****
+[source,c++]
+----
+include::cannypoints.cpp[]
+----
+****
+
+Figura base:
+
+image:seul.jpg[]
+
+Os resultados são mostrados abaixo:
+
+image:cannypoints.png[]

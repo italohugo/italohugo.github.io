@@ -447,6 +447,12 @@ body.book #toc,body.book #preamble,body.book h1.sect0,body.book .sect1>h2{page-b
 <li><a href="#_exercício_7_tiltshift_cpp">Exercício 7 - tiltshift.cpp</a></li>
 </ul>
 </li>
+<li><a href="#_2ª_unidade">2ª Unidade</a>
+<ul class="sectlevel2">
+<li><a href="#_exercício_1_filtrohomo_cpp">Exercício 1 - filtrohomo.cpp</a></li>
+<li><a href="#_exercício_2_cannypoints_cpp">Exercício 2 - cannypoints.cpp</a></li>
+</ul>
+</li>
 </ul>
 </div>
 </div>
@@ -1109,10 +1115,437 @@ int main(int argc, char* argv[]){
 </div>
 </div>
 </div>
+<div class="sect1">
+<h2 id="_2ª_unidade">2ª Unidade</h2>
+<div class="sectionbody">
+<div class="sect2">
+<h3 id="_exercício_1_filtrohomo_cpp">Exercício 1 - filtrohomo.cpp</h3>
+<div class="paragraph">
+<p>Implementação do filtro homomórfico para melhorar imagens com iluminação irregular.</p>
+</div>
+<div class="sidebarblock">
+<div class="content">
+<div class="listingblock">
+<div class="content">
+<pre class="prettyprint highlight"><code class="language-c++" data-lang="c++">#include &lt;iostream&gt;
+#include &lt;opencv2/opencv.hpp&gt;
+#include &lt;opencv2/imgproc/imgproc.hpp&gt;
+
+#define gamaL_slider_max 100
+#define gamaH_slider_max 100
+#define d_slider_max     100
+#define c_slider_max     100
+
+using namespace cv;
+using namespace std;
+
+Mat image, padded, imagegray, tmp, filtrada, complexImage, res;
+Mat_&lt;float&gt; realInput, zeros;
+vector&lt;Mat&gt; planos;
+
+int dft_M, dft_N, gamaL_slider, gamaH_slider, d_slider, c_slider;
+float c, d, gamaH, gamaL;
+
+char key;
+
+// troca os quadrantes da imagem da DFT
+void deslocaDFT(Mat&amp; image ){
+  Mat tmp, A, B, C, D;
+
+  // se a imagem tiver tamanho impar, recorta a regiao para
+  // evitar cópias de tamanho desigual
+  image = image(Rect(0, 0, image.cols &amp; -2, image.rows &amp; -2));
+  int cx = image.cols/2;
+  int cy = image.rows/2;
+
+  // reorganiza os quadrantes da transformada
+  // A B   -&gt;  D C
+  // C D       B A
+  A = image(Rect(0, 0, cx, cy));
+  B = image(Rect(cx, 0, cx, cy));
+  C = image(Rect(0, cy, cx, cy));
+  D = image(Rect(cx, cy, cx, cy));
+
+  // A &lt;-&gt; D
+  A.copyTo(tmp);  D.copyTo(A);  tmp.copyTo(D);
+  // C &lt;-&gt; B
+  C.copyTo(tmp);  B.copyTo(C);  tmp.copyTo(B);
+}
+
+void Filtro(int, void*){
+  int dft_M, dft_N;
+
+  dft_M = tmp.size().height;
+  dft_N = tmp.size().width;
+
+  gamaL = gamaL_slider / 10.0;
+  gamaH = gamaH_slider / 10.0;
+  d     = d_slider / 10.0;
+  c     = c_slider / 10.0;
+
+  // prepara o filtro passa-baixas ideal
+  for(int i=0; i&lt;dft_M; i++){
+    for(int j=0; j&lt;dft_N; j++){
+      tmp.at&lt;float&gt; (i,j) = (gamaH - gamaL) *
+      (1 - exp(-1 * c * (pow(i - dft_M/2, 2) +
+      pow(j - dft_N/2, 2))/pow(d,2))) + gamaL;
+    }
+  }
+
+  // cria a matriz com as componentes do filtro e junta
+  // ambas em uma matriz multicanal complexa
+  Mat comps[]= {tmp, tmp};
+  merge(comps, 2, filtrada);
+}
+
+int main(int argc, char** argv){
+
+  namedWindow("filtrada", CV_WINDOW_AUTOSIZE);
+  createTrackbar("gamaH",
+                "filtrada",
+                &amp;gamaH_slider,
+                gamaH_slider_max,
+                Filtro);
+  createTrackbar("gamaL",
+                "filtrada",
+                &amp;gamaL_slider,
+                gamaL_slider_max,
+                Filtro);
+  createTrackbar("d",
+                "filtrada",
+                &amp;d_slider,
+                d_slider_max,
+                Filtro);
+  createTrackbar("c",
+                "filtrada",
+                &amp;c_slider,
+                c_slider_max,
+                Filtro);
+
+  // carregar imagem
+  image = imread(argv[1], CV_LOAD_IMAGE_GRAYSCALE);
+
+  if(!image.data){
+    cout &lt;&lt; "Nao abriu: " &lt;&lt; argv[1] &lt;&lt; endl;
+    cout &lt;&lt; argv[0] &lt;&lt; " imagem.jpg";
+    exit(0);
+  }
+
+  // identifica os tamanhos otimos para
+  // calculo do FFT
+  dft_M = getOptimalDFTSize(image.rows);
+  dft_N = getOptimalDFTSize(image.cols);
+
+  // realiza o padding da imagem
+  copyMakeBorder(image, padded, 0,
+                 dft_M - image.rows, 0,
+                 dft_N - image.cols,
+                 BORDER_CONSTANT, Scalar::all(0));
+
+  // parte imaginaria da matriz complexa (preenchida com zeros)
+  zeros = Mat_&lt;float&gt;::zeros(padded.size());
+
+  // prepara a matriz complexa para ser preenchida
+  complexImage = Mat(padded.size(), CV_32FC2, Scalar(0));
+
+  // a função de transferência (filtro frequencial) deve ter o
+  // mesmo tamanho e tipo da matriz complexa
+  filtrada = complexImage.clone();
+
+  // cria uma matriz temporária para criar as componentes real
+  // e imaginaria do filtro ideal
+  tmp = Mat(dft_M, dft_N, CV_32F);
+
+  for(;;){
+    imagegray = image.clone();
+    imshow("original", imagegray);
+
+    // realiza o padding da imagem
+    copyMakeBorder(imagegray, padded, 0,
+                   dft_M - image.rows, 0,
+                   dft_N - image.cols,
+                   BORDER_CONSTANT, Scalar::all(0));
+
+    // limpa o array de matrizes que vao compor a
+    // imagem complexa
+    planos.clear();
+    // cria a compoente real
+    realInput = Mat_&lt;float&gt;(padded);
+
+    //calculando o logaritmo da imagem
+    log(realInput, realInput);
+
+    // insere as duas componentes no array de matrizes
+    planos.push_back(realInput);
+    planos.push_back(zeros);
+
+    // combina o array de matrizes em uma unica
+    // componente complexa
+    merge(planos, complexImage);
+
+    // calcula o dft
+    dft(complexImage, complexImage);
+
+    // realiza a troca de quadrantes
+    deslocaDFT(complexImage);
+
+    // aplica o filtro frequencial
+    mulSpectrums(complexImage,filtrada,complexImage,0);
+
+    // troca novamente os quadrantes
+    deslocaDFT(complexImage);
+
+    // calcula a DFT inversa
+    idft(complexImage, complexImage, DFT_SCALE);
+
+    // limpa o array de planos
+    planos.clear();
+
+    // separa as partes real e imaginaria da
+    // imagem filtrada
+    split(complexImage, planos);
+
+    //calcular exponencial
+    exp(planos[0], planos[0]);
+
+    // normaliza a parte real para exibicao
+    normalize(planos[0], planos[0], 0, 1, CV_MINMAX);
+    imshow("filtrada", planos[0]);
+
+    key = (char) waitKey(10);
+    if( key == 27 )
+      break;
+  }
+    planos[0].convertTo(res, CV_8UC1, 255.0);
+    imwrite("ImagemOriginal.png", imagegray);
+    imwrite("filtrada.png", res);
+
+  return 0;
+}</code></pre>
+</div>
+</div>
+</div>
+</div>
+<div class="paragraph">
+<p>Os resultados são mostrados abaixo:</p>
+</div>
+<div class="paragraph">
+<p><span class="image"><img src="homo.png" alt="homo"></span></p>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_exercício_2_cannypoints_cpp">Exercício 2 - cannypoints.cpp</h3>
+<div class="paragraph">
+<p>Usar as bordas produzidas pelo algoritmo de Canny para melhorar a qualidade da imagem pontilhista gerada.</p>
+</div>
+<div class="sidebarblock">
+<div class="content">
+<div class="listingblock">
+<div class="content">
+<pre class="prettyprint highlight"><code class="language-c++" data-lang="c++">#include &lt;iostream&gt;
+#include &lt;opencv2/opencv.hpp&gt;
+#include &lt;algorithm&gt;
+#include &lt;numeric&gt;
+#include &lt;ctime&gt;
+#include &lt;cstdlib&gt;
+#include &lt;fstream&gt;
+#include &lt;iomanip&gt;
+#include &lt;vector&gt;
+
+#define STEP 5
+#define JITTER 3
+
+using namespace std;
+using namespace cv;
+
+int main(int argc, char** argv){
+
+  Mat image, border, points;
+  int threshold, width, height, x, y, r, g , b, i, j;
+
+  vector&lt;int&gt; yrange;
+  vector&lt;int&gt; xrange;
+
+  int RAIO = 5;
+
+  //imagem que sera passada como argumento ao executar o programa
+  image= imread(argv[1],CV_LOAD_IMAGE_COLOR);
+
+  //checa se a imagem abriu ou nao
+  if(!image.data){
+    cout &lt;&lt; "nao abriu" &lt;&lt; argv[1] &lt;&lt; endl;
+    cout &lt;&lt; argv[0] &lt;&lt; " imagem.jpg";
+    exit(0);
+  }
+
+  //Aplicação do algoritimo pontilhismo
+  srand(time(0));
+
+  width=image.size().width;
+  height=image.size().height;
+
+  xrange.resize(height/STEP);
+  yrange.resize(width/STEP);
+
+  iota(xrange.begin(), xrange.end(), 0);
+  iota(yrange.begin(), yrange.end(), 0);
+
+  for(uint i=0; i&lt;xrange.size(); i++){
+    xrange[i]= xrange[i]*STEP+STEP/2;
+  }
+
+  for(uint i=0; i&lt;yrange.size(); i++){
+    yrange[i]= yrange[i]*STEP+STEP/2;
+  }
+
+  points = Mat(height, width, CV_8UC3, Scalar(CV_RGB(255,255,255)));
+
+  random_shuffle(xrange.begin(), xrange.end());
+
+  for(auto i : xrange){
+    random_shuffle(yrange.begin(), yrange.end());
+    for(auto j : yrange){
+      x = i+rand()%(2*JITTER)-JITTER+1;
+      y = j+rand()%(2*JITTER)-JITTER+1;
+      r = image.at&lt;cv::Vec3b&gt;(x,y)[2];
+      g = image.at&lt;cv::Vec3b&gt;(x,y)[1];
+      b = image.at&lt;cv::Vec3b&gt;(x,y)[0];
+      circle(points,
+             cv::Point(y,x),
+             RAIO,
+             CV_RGB(r,g,b),
+             -1,
+             CV_AA);
+    }
+  }
+
+  //algoritimo de canny para melhorar o pontilhismo
+  //aplica um threshold baixo para plotar o maior numero de bordas
+  threshold = 50;
+  Canny(image, border, threshold, 3*threshold);
+
+  //abaixa o raio para quatro
+  RAIO = 4;
+
+  //vasculha a imagem resultante do algoritimo de canny reassentuando os pontos de borda, plotando os circulos nesses pontos agora c raio 4
+  for(i=0;i&lt;height;i++){
+    for(j=0;j&lt;width;j++){
+      //checa se o pixel atual não é de fundo, ou seja, preto
+      if(border.at&lt;uchar&gt;(i,j)&gt;0){
+        //se nao for ele pega os valor da cor do pixel em RGB
+        r = image.at&lt;cv::Vec3b&gt;(i,j)[2];
+        g = image.at&lt;cv::Vec3b&gt;(i,j)[1];
+        b = image.at&lt;cv::Vec3b&gt;(i,j)[0];
+        //Coloca um circulo na mesma posição do pixel de borda na imagem resultante com as cores RGB coletadas
+        circle(points,
+             cv::Point(j,i),
+             RAIO,
+             CV_RGB(r,g,b),
+             -1,
+             CV_AA);
+      }
+    }
+  }
+
+  //aumentamos mais o theshold para plotar agora menos bordas, porém essas bordas sao mais acentuadas que a anterior
+  //reaplicamos o canny
+  threshold = 100;
+  Canny(image, border, threshold, 3*threshold);
+
+  //por serem mais fortes esses novos pontos vamos diminuir mais o raio do circulo
+  RAIO = 3;
+
+  for(i=0;i&lt;height;i++){
+    for(j=0;j&lt;width;j++){
+      if(border.at&lt;uchar&gt;(i,j)&gt;0){
+        r = image.at&lt;cv::Vec3b&gt;(i,j)[2];
+        g = image.at&lt;cv::Vec3b&gt;(i,j)[1];
+        b = image.at&lt;cv::Vec3b&gt;(i,j)[0];
+        circle(points,
+             cv::Point(j,i),
+             RAIO,
+             CV_RGB(r,g,b),
+             -1,
+             CV_AA);
+      }
+    }
+  }
+
+  //fazemos de novo o processo anterior para um threshold de 150 e com raio 2
+  threshold = 150;
+  Canny(image, border, threshold, 3*threshold);
+
+  RAIO = 2;
+
+  for(i=0;i&lt;height;i++){
+    for(j=0;j&lt;width;j++){
+      if(border.at&lt;uchar&gt;(i,j)&gt;0){
+        r = image.at&lt;cv::Vec3b&gt;(i,j)[2];
+        g = image.at&lt;cv::Vec3b&gt;(i,j)[1];
+        b = image.at&lt;cv::Vec3b&gt;(i,j)[0];
+        circle(points,
+             cv::Point(j,i),
+             RAIO,
+             CV_RGB(r,g,b),
+             -1,
+             CV_AA);
+      }
+    }
+  }
+
+  //E por fim, as bordas mais acentuadas, com threshold de 200, usamos um raio = 1
+  threshold = 200;
+  Canny(image, border, threshold, 3*threshold);
+
+  RAIO = 1;
+
+  for(i=0;i&lt;height;i++){
+    for(j=0;j&lt;width;j++){
+      if(border.at&lt;uchar&gt;(i,j)&gt;0){
+        r = image.at&lt;cv::Vec3b&gt;(i,j)[2];
+        g = image.at&lt;cv::Vec3b&gt;(i,j)[1];
+        b = image.at&lt;cv::Vec3b&gt;(i,j)[0];
+        circle(points,
+             cv::Point(j,i),
+             RAIO,
+             CV_RGB(r,g,b),
+             -1,
+             CV_AA);
+      }
+    }
+  }
+
+  //após o processo mostramos a imagem resultado
+  imshow("Saida", points);
+  //espera qualquer tecla a ser precionada
+  waitKey();
+  //escreve um arquivo de saida da imagem resultado denominada "cannypontos.png"
+  imwrite("cannypoints.png", points);
+  return 0;
+}</code></pre>
+</div>
+</div>
+</div>
+</div>
+<div class="paragraph">
+<p>Figura base:</p>
+</div>
+<div class="paragraph">
+<p><span class="image"><img src="seul.jpg" alt="seul"></span></p>
+</div>
+<div class="paragraph">
+<p>Os resultados são mostrados abaixo:</p>
+</div>
+<div class="paragraph">
+<p><span class="image"><img src="cannypoints.png" alt="cannypoints"></span></p>
+</div>
+</div>
+</div>
+</div>
 </div>
 <div id="footer">
 <div id="footer-text">
-Last updated 2018-04-08 21:50:18 -03
+Last updated 2018-05-18 14:00:55 -03
 </div>
 </div>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prettify/r298/prettify.min.css">
