@@ -451,6 +451,7 @@ body.book #toc,body.book #preamble,body.book h1.sect0,body.book .sect1>h2{page-b
 <ul class="sectlevel2">
 <li><a href="#_exercício_1_filtrohomo_cpp">Exercício 1 - filtrohomo.cpp</a></li>
 <li><a href="#_exercício_2_cannypoints_cpp">Exercício 2 - cannypoints.cpp</a></li>
+<li><a href="#_exercício_3_kmeans_cpp">Exercício 3 - kmeans.cpp</a></li>
 </ul>
 </li>
 </ul>
@@ -1540,12 +1541,128 @@ int main(int argc, char** argv){
 <p><span class="image"><img src="cannypoints.png" alt="cannypoints"></span></p>
 </div>
 </div>
+<div class="sect2">
+<h3 id="_exercício_3_kmeans_cpp">Exercício 3 - kmeans.cpp</h3>
+<div class="paragraph">
+<p>Realize 10 rodadas diferentes do algoritmo e compare as imagens produzidas. Explique porque elas podem diferir tanto.</p>
+</div>
+<div class="sidebarblock">
+<div class="content">
+<div class="listingblock">
+<div class="content">
+<pre class="prettyprint highlight"><code class="language-c++" data-lang="c++">#include &lt;opencv2/opencv.hpp&gt;
+#include &lt;cstdlib&gt;
+
+using namespace cv;
+
+int main( int argc, char** argv ){
+  int nClusters = 6;
+  Mat rotulos;
+  int nRodadas = 1;
+  Mat centros;
+
+
+  Mat img = imread( "gash.jpg", CV_LOAD_IMAGE_COLOR);
+  Mat samples(img.rows * img.cols, 3, CV_32F);
+    for (int i = 0; i &lt; 10; i++)
+    {
+      for( int y = 0; y &lt; img.rows; y++ ){
+        for( int x = 0; x &lt; img.cols; x++ ){
+          for( int z = 0; z &lt; 3; z++){
+            samples.at&lt;float&gt;(y + x*img.rows, z) = img.at&lt;Vec3b&gt;(y,x)[z];
+          }
+        }
+      }
+
+
+  kmeans(samples,
+		 nClusters,
+		 rotulos,
+		 TermCriteria(CV_TERMCRIT_ITER|CV_TERMCRIT_EPS, 10000, 0.0001),
+		 nRodadas,
+		 KMEANS_PP_CENTERS,
+		 centros );
+
+
+  Mat rotulada( img.size(), img.type() );
+  for( int y = 0; y &lt; img.rows; y++ ){
+    for( int x = 0; x &lt; img.cols; x++ ){
+	  int indice = rotulos.at&lt;int&gt;(y + x*img.rows,0);
+	  rotulada.at&lt;Vec3b&gt;(y,x)[0] = (uchar) centros.at&lt;float&gt;(indice, 0);
+	  rotulada.at&lt;Vec3b&gt;(y,x)[1] = (uchar) centros.at&lt;float&gt;(indice, 1);
+	  rotulada.at&lt;Vec3b&gt;(y,x)[2] = (uchar) centros.at&lt;float&gt;(indice, 2);
+	}
+  }
+  //salvando as imagens
+		if (i == 0) {
+			imshow("clustered image", rotulada);
+			imwrite("k1.jpg", rotulada);
+		}
+		if (i == 1) {
+			imshow("clustered image", rotulada);
+			imwrite("k2.jpg", rotulada);
+		}
+		if (i == 2) {
+			imshow("clustered image", rotulada);
+			imwrite("k3.jpg", rotulada);
+		}
+		if (i == 3) {
+			imshow("clustered image", rotulada);
+			imwrite("k4.jpg", rotulada);
+		}
+		if (i == 4) {
+			imshow("clustered image", rotulada);
+			imwrite("k5.jpg", rotulada);
+		}
+		if (i == 5) {
+			imshow("clustered image", rotulada);
+			imwrite("k6.jpg", rotulada);
+		}
+		if (i == 6) {
+			imshow("clustered image", rotulada);
+			imwrite("k7.jpg", rotulada);
+		}
+		if (i == 7) {
+			imshow("clustered image", rotulada);
+			imwrite("k8.jpg", rotulada);
+		}
+		if (i == 8) {
+			imshow("clustered image", rotulada);
+			imwrite("k9.jpg", rotulada);
+		}
+		if (i == 9) {
+			imshow("clustered image", rotulada);
+			imwrite("k10.jpg", rotulada);
+		}
+  }
+  return 0;
+}</code></pre>
+</div>
+</div>
+</div>
+</div>
+<div class="paragraph">
+<p>Figura base:</p>
+</div>
+<div class="paragraph">
+<p><span class="image"><img src="gash.jpg" alt="Gash" width="478" height="268"></span></p>
+</div>
+<div class="paragraph">
+<p>Os resultados são mostrados no gif abaixo:</p>
+</div>
+<div class="paragraph">
+<p><span class="image"><img src="gash.gif" alt="gash"></span></p>
+</div>
+<div class="paragraph">
+<p>Conclusão: Os centros escolhidos pelo algoritmo definem quais cores terão maior peso na reciação da imagem, dessa forma os resultados terão um conjunto reduzido de cores. Como os centros são gerados de maneira randômica o resultado será diferente para cada imagem recriada.</p>
+</div>
+</div>
 </div>
 </div>
 </div>
 <div id="footer">
 <div id="footer-text">
-Last updated 2018-05-18 14:00:55 -03
+Last updated 2018-05-20 21:59:50 -03
 </div>
 </div>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prettify/r298/prettify.min.css">

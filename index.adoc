@@ -162,3 +162,25 @@ image:seul.jpg[]
 Os resultados são mostrados abaixo:
 
 image:cannypoints.png[]
+
+=== Exercício 3 - kmeans.cpp
+
+Realize 10 rodadas diferentes do algoritmo e compare as imagens produzidas. Explique porque elas podem diferir tanto.
+
+[sidebar]
+****
+[source,c++]
+----
+include::kmeans.cpp[]
+----
+****
+
+Figura base:
+
+image:gash.jpg[Gash,478,268]
+
+Os resultados são mostrados no gif abaixo:
+
+image:gash.gif[]
+
+Conclusão: Os centros escolhidos pelo algoritmo definem quais cores terão maior peso na reciação da imagem, dessa forma os resultados terão um conjunto reduzido de cores. Como os centros são gerados de maneira randômica o resultado será diferente para cada imagem recriada. 
